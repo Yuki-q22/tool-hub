@@ -79,7 +79,7 @@ export const tools: ToolItem[] = [
   id: 'video-automatic-review',
   name: '视频自动审核工具',
   kind: 'userscript',
-  version: '1.1.0',
+  version: '1.1',
   updateTime: '2026-05-19',
   summary: '自动审核视频内容',
   tags: ['篡改猴', '视频审核', '自动审核', '内容安全'],
@@ -134,7 +134,7 @@ export const tools: ToolItem[] = [
   id: 'academic-bridge-score-synchronization',
   name: '学业桥分数同步 - 半自动',
   kind: 'userscript',
-  version: '1.0',
+  version: '1.1',
   updateTime: '2026-05-19',
   summary: '在高招数据管理-同步数据-专业分中同步学业桥分数。',
   tags: ['篡改猴', '学业桥', '分数同步', '半自动'],
@@ -173,13 +173,13 @@ export const tools: ToolItem[] = [
 `,
   changelog: [
     {
-      version: '1.0',
+      version: '1.1',
       date: '2026-05-19',
       items: [
         '加入工具发布中心',
         '配置 @updateURL 和 @downloadURL',
-        '支持从 tool-hub 页面安装脚本',
-        '保留原有链接生成、复制和打开逻辑'
+        '修正页面展示版本与脚本 @version 保持一致',
+        '保留原有分数同步逻辑'
       ]
     }
   ]

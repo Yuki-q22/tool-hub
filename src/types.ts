@@ -25,4 +25,6 @@ export interface ToolItem {
   versionNote: string
   doc: string
   changelog: ChangeLogItem[]
+  /** 是否在页面中作为重点更新展示 */
+  important?: boolean
 }

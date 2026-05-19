@@ -1,8 +1,9 @@
-import React, { useMemo, useState } from 'react'
-import { kindLabels, tools } from './tools'
+import React, { useEffect, useMemo, useState } from 'react'
+import { kindLabels, SITE_URL, tools } from './tools'
 import type { ToolItem, ToolKind } from './types'
 
 type FilterKind = 'all' | ToolKind
+type DetailTab = 'overview' | 'usage' | 'changelog'
 
 const filters: Array<{ key: FilterKind; label: string }> = [
   { key: 'all', label: '全部' },
@@ -12,7 +13,17 @@ const filters: Array<{ key: FilterKind; label: string }> = [
   { key: 'python-script', label: 'Python 脚本' }
 ]
 
-function h(type: string | React.ComponentType<any>, props?: Record<string, any> | null, ...children: React.ReactNode[]): React.ReactElement {
+const detailTabs: Array<{ key: DetailTab; label: string }> = [
+  { key: 'overview', label: '版本信息' },
+  { key: 'usage', label: '安装使用' },
+  { key: 'changelog', label: '更新日志' }
+]
+
+function h(
+  type: string | React.ComponentType<any>,
+  props?: Record<string, any> | null,
+  ...children: React.ReactNode[]
+): React.ReactElement {
   return React.createElement(type as any, props, ...children)
 }
 
@@ -48,19 +59,58 @@ function getPrimaryAction(tool: ToolItem): { label: string; url: string; isExter
   }
 }
 
+function getAbsoluteUrl(url: string): string {
+  if (!url) return ''
+  if (/^https?:\/\//i.test(url)) return url
+  return `${SITE_URL.replace(/\/$/, '')}/${url.replace(/^\//, '')}`
+}
+
 function normalizeText(value: string): string {
   return value.trim().toLowerCase()
 }
 
-function renderDoc(doc: string): React.ReactElement[] {
+function getLatestTools(items: ToolItem[], limit = 3): ToolItem[] {
+  return [...items]
+    .sort((a, b) => {
+      const dateDiff = Date.parse(b.updateTime) - Date.parse(a.updateTime)
+      if (dateDiff !== 0) return dateDiff
+      return a.name.localeCompare(b.name, 'zh-Hans-CN')
+    })
+    .slice(0, limit)
+}
+
+function buildAnnouncementText(latestTools: ToolItem[]): string {
+  if (latestTools.length === 0) return ''
+
+  const latestDate = latestTools[0].updateTime
+  const updateLines = latestTools.map((tool, index) => {
+    const latestLog = tool.changelog[0]
+    const items = latestLog?.items?.slice(0, 3).join('；') || tool.summary
+    return `${index + 1}. ${tool.name} v${tool.version}：${items}`
+  })
+
+  return [
+    '【工具发布中心更新】',
+    '',
+    `更新时间：${latestDate}`,
+    '',
+    '最近更新工具：',
+    ...updateLines,
+    '',
+    `访问地址：${SITE_URL}`
+  ].join('\n')
+}
+
+function renderDocBlocks(doc: string, keyPrefix = 'doc'): React.ReactElement[] {
   const lines = doc.trim().split('\n')
   const result: React.ReactElement[] = []
 
   lines.forEach((line, index) => {
     const trimmed = line.trim()
+    const key = `${keyPrefix}-${index}`
 
     if (!trimmed) {
-      result.push(h('div', { key: index, className: 'doc-space' }))
+      result.push(h('div', { key, className: 'doc-space' }))
       return
     }
 
@@ -68,7 +118,7 @@ function renderDoc(doc: string): React.ReactElement[] {
       result.push(
         h(
           'h4',
-          { key: index, className: 'doc-title' },
+          { key, className: 'doc-title' },
           trimmed.replace(/^###\s+/, '')
         )
       )
@@ -79,7 +129,7 @@ function renderDoc(doc: string): React.ReactElement[] {
       result.push(
         h(
           'div',
-          { key: index, className: 'doc-bullet' },
+          { key, className: 'doc-bullet' },
           h('span', null, '•'),
           h('p', null, trimmed.replace(/^-\s+/, ''))
         )
@@ -91,7 +141,7 @@ function renderDoc(doc: string): React.ReactElement[] {
       result.push(
         h(
           'div',
-          { key: index, className: 'doc-step' },
+          { key, className: 'doc-step' },
           h('span', null, trimmed.match(/^\d+/)?.[0] || ''),
           h('p', null, trimmed.replace(/^\d+\.\s+/, ''))
         )
@@ -102,7 +152,7 @@ function renderDoc(doc: string): React.ReactElement[] {
     result.push(
       h(
         'p',
-        { key: index, className: 'doc-paragraph' },
+        { key, className: 'doc-paragraph' },
         trimmed.replace(/`/g, '')
       )
     )
@@ -111,7 +161,61 @@ function renderDoc(doc: string): React.ReactElement[] {
   return result
 }
 
-function CopyButton({ text }: { text: string }): React.ReactElement {
+function renderDocSections(doc: string): React.ReactElement {
+  const sections: Array<{ title: string; body: string[] }> = []
+  let currentTitle = '使用说明'
+  let currentBody: string[] = []
+
+  doc.trim().split('\n').forEach((line) => {
+    const trimmed = line.trim()
+
+    if (trimmed.startsWith('### ')) {
+      if (currentBody.some((item) => item.trim())) {
+        sections.push({ title: currentTitle, body: currentBody })
+      }
+      currentTitle = trimmed.replace(/^###\s+/, '')
+      currentBody = []
+      return
+    }
+
+    currentBody.push(line)
+  })
+
+  if (currentBody.some((item) => item.trim())) {
+    sections.push({ title: currentTitle, body: currentBody })
+  }
+
+  const safeSections = sections.length > 0 ? sections : [{ title: '使用说明', body: [doc] }]
+
+  return h(
+    'div',
+    { className: 'doc-accordion' },
+    ...safeSections.map((section, index) =>
+      h(
+        'details',
+        { key: `${section.title}-${index}`, className: 'doc-collapse', open: index === 0 },
+        h('summary', null, section.title),
+        h(
+          'div',
+          { className: 'doc-content' },
+          ...renderDocBlocks(section.body.join('\n'), `${section.title}-${index}`)
+        )
+      )
+    )
+  )
+}
+
+function CopyButton({
+  text,
+  label = '复制链接',
+  copiedLabel = '已复制',
+  className = 'ghost-button'
+}: {
+  text: string
+  label?: string
+  copiedLabel?: string
+  className?: string
+}): React.ReactElement {
   const [copied, setCopied] = useState(false)
 
   async function handleCopy(): Promise<void> {
@@ -122,19 +226,19 @@ function CopyButton({ text }: { text: string }): React.ReactElement {
       setCopied(true)
       window.setTimeout(() => setCopied(false), 1200)
     } catch {
-      window.alert('复制失败，请手动复制链接。')
+      window.alert('复制失败，请手动复制。')
     }
   }
 
   return h(
     'button',
     {
-      className: 'ghost-button',
+      className,
       type: 'button',
       onClick: handleCopy,
       disabled: !text
     },
-    copied ? '已复制' : '复制链接'
+    copied ? copiedLabel : label
   )
 }
 
@@ -156,6 +260,93 @@ function StatusPill({
   )
 }
 
+function HomeAnnouncement({
+  latestTools,
+  onSelect
+}: {
+  latestTools: ToolItem[]
+  onSelect: (tool: ToolItem) => void
+}): React.ReactElement | null {
+  if (latestTools.length === 0) return null
+
+  const featuredTool = latestTools[0]
+  const featuredAction = getPrimaryAction(featuredTool)
+  const announcementText = buildAnnouncementText(latestTools)
+
+  return h(
+    'section',
+    { className: 'update-board' },
+    h(
+      'div',
+      { className: 'update-board-main' },
+      h('div', { className: 'section-heading compact' }, h('span', null, '最新更新公告')),
+      h('h2', null, `${featuredTool.name} v${featuredTool.version}`),
+      h('p', { className: 'update-summary' }, featuredTool.summary),
+      h(
+        'div',
+        { className: 'update-meta-row' },
+        h('span', null, `更新时间：${featuredTool.updateTime}`),
+        h('span', null, kindLabels[featuredTool.kind]),
+        h('span', null, featuredTool.supportAutoUpdate ? '支持自动/直接同步' : '需手动下载更新')
+      ),
+      h(
+        'div',
+        { className: 'update-actions' },
+        h(
+          'button',
+          {
+            className: 'primary-button',
+            type: 'button',
+            onClick: () => onSelect(featuredTool)
+          },
+          '查看详情'
+        ),
+        featuredAction.url
+          ? h(
+              'a',
+              {
+                className: 'ghost-button',
+                href: featuredAction.url,
+                target: featuredAction.isExternal ? '_blank' : '_self',
+                rel: 'noreferrer'
+              },
+              featuredAction.label
+            )
+          : null,
+        h(CopyButton, {
+          text: announcementText,
+          label: '复制公告',
+          copiedLabel: '公告已复制'
+        })
+      )
+    ),
+    h(
+      'div',
+      { className: 'update-board-list' },
+      ...latestTools.map((tool) => {
+        const latestLog = tool.changelog[0]
+        return h(
+          'button',
+          {
+            key: tool.id,
+            className: 'update-mini-card',
+            type: 'button',
+            onClick: () => onSelect(tool)
+          },
+          h(
+            'span',
+            { className: `tool-kind mini kind-${tool.kind}` },
+            kindLabels[tool.kind]
+          ),
+          h('strong', null, tool.name),
+          h('small', null, `v${tool.version} · ${tool.updateTime}`),
+          latestLog?.items?.[0] ? h('p', null, latestLog.items[0]) : null
+        )
+      })
+    )
+  )
+}
+
 function ToolCard({
   tool,
   active,
@@ -166,11 +357,14 @@ function ToolCard({
   onSelect: (tool: ToolItem) => void
 }): React.ReactElement {
   const primaryAction = getPrimaryAction(tool)
+  const cardClassName = active
+    ? `tool-card tool-card-active kind-${tool.kind}`
+    : `tool-card kind-${tool.kind}`
 
   return h(
     'article',
     {
-      className: active ? 'tool-card tool-card-active' : 'tool-card',
+      className: cardClassName,
       onClick: () => onSelect(tool)
     },
     h(
@@ -179,7 +373,7 @@ function ToolCard({
       h(
         'div',
         null,
-        h('div', { className: 'tool-kind' }, kindLabels[tool.kind]),
+        h('div', { className: `tool-kind kind-${tool.kind}` }, kindLabels[tool.kind]),
         h('h3', null, tool.name)
       ),
       h('div', { className: 'version-badge' }, `v${tool.version}`)
@@ -238,13 +432,42 @@ function ToolCard({
             },
             '未配置链接'
           ),
-      h(CopyButton, { text: primaryAction.url })
+      h(CopyButton, { text: getAbsoluteUrl(primaryAction.url) })
+    )
+  )
+}
+
+function ChangelogList({ tool }: { tool: ToolItem }): React.ReactElement {
+  return h(
+    'div',
+    { className: 'changelog-list' },
+    ...tool.changelog.map((log) =>
+      h(
+        'div',
+        { key: `${tool.id}-${log.version}`, className: 'changelog-item' },
+        h(
+          'div',
+          { className: 'changelog-top' },
+          h('strong', null, `v${log.version}`),
+          h('span', null, log.date)
+        ),
+        h(
+          'ul',
+          null,
+          ...log.items.map((item) => h('li', { key: item }, item))
+        )
+      )
     )
   )
 }
 
 function DetailPanel({ tool }: { tool: ToolItem }): React.ReactElement {
   const primaryAction = getPrimaryAction(tool)
+  const [activeTab, setActiveTab] = useState<DetailTab>('overview')
+
+  useEffect(() => {
+    setActiveTab('overview')
+  }, [tool.id])
 
   return h(
     'aside',
@@ -252,49 +475,12 @@ function DetailPanel({ tool }: { tool: ToolItem }): React.ReactElement {
     h(
       'div',
       { className: 'detail-sticky' },
-
       h(
         'section',
-        { className: 'detail-block' },
-        h('div', { className: 'section-heading' }, h('span', null, '版本说明')),
+        { className: 'detail-block detail-head' },
+        h('div', { className: `tool-kind kind-${tool.kind}` }, kindLabels[tool.kind]),
         h('h2', null, tool.name),
         h('p', { className: 'detail-summary' }, tool.summary),
-
-        h(
-          'div',
-          { className: 'version-table' },
-          h('div', null, h('span', null, '当前版本'), h('strong', null, `v${tool.version}`)),
-          h('div', null, h('span', null, '更新时间'), h('strong', null, tool.updateTime)),
-          h('div', null, h('span', null, '工具类型'), h('strong', null, kindLabels[tool.kind])),
-          h('div', null, h('span', null, '适用平台'), h('strong', null, tool.platform.join(' / ')))
-        ),
-
-        h(
-          'div',
-          { className: 'status-row' },
-          h(StatusPill, {
-            enabled: tool.supportAutoUpdate,
-            trueText: '支持自动/直接同步',
-            falseText: '不支持自动更新'
-          }),
-          h(StatusPill, {
-            enabled: !tool.needReinstallWhenUpdate,
-            trueText: '无需重新安装',
-            falseText: '更新后需重新安装'
-          })
-        ),
-
-        h('p', { className: 'version-note' }, tool.versionNote),
-
-        tool.matchUrls && tool.matchUrls.length > 0
-          ? h(
-              'div',
-              { className: 'match-box' },
-              h('span', null, '适用页面 / 场景'),
-              ...tool.matchUrls.map((url) => h('code', { key: url }, url))
-            )
-          : null,
-
         h(
           'div',
           { className: 'detail-actions' },
@@ -310,42 +496,83 @@ function DetailPanel({ tool }: { tool: ToolItem }): React.ReactElement {
                 primaryAction.label
               )
             : null,
-          h(CopyButton, { text: primaryAction.url })
+          h(CopyButton, { text: getAbsoluteUrl(primaryAction.url) })
         )
       ),
 
       h(
         'section',
-        { className: 'detail-block' },
-        h('div', { className: 'section-heading' }, h('span', null, '说明文档')),
-        h('div', { className: 'doc-content' }, ...renderDoc(tool.doc))
-      ),
-
-      h(
-        'section',
-        { className: 'detail-block' },
-        h('div', { className: 'section-heading' }, h('span', null, '更新日志')),
+        { className: 'detail-block tabbed-detail' },
         h(
           'div',
-          { className: 'changelog-list' },
-          ...tool.changelog.map((log) =>
+          { className: 'detail-tab-list' },
+          ...detailTabs.map((tab) =>
             h(
-              'div',
-              { key: `${tool.id}-${log.version}`, className: 'changelog-item' },
-              h(
-                'div',
-                { className: 'changelog-top' },
-                h('strong', null, `v${log.version}`),
-                h('span', null, log.date)
-              ),
-              h(
-                'ul',
-                null,
-                ...log.items.map((item) => h('li', { key: item }, item))
-              )
+              'button',
+              {
+                key: tab.key,
+                className: activeTab === tab.key ? 'detail-tab active' : 'detail-tab',
+                type: 'button',
+                onClick: () => setActiveTab(tab.key)
+              },
+              tab.label
             )
           )
-        )
+        ),
+
+        activeTab === 'overview'
+          ? h(
+              'div',
+              { className: 'detail-tab-panel' },
+              h(
+                'div',
+                { className: 'version-table' },
+                h('div', null, h('span', null, '当前版本'), h('strong', null, `v${tool.version}`)),
+                h('div', null, h('span', null, '更新时间'), h('strong', null, tool.updateTime)),
+                h('div', null, h('span', null, '工具类型'), h('strong', null, kindLabels[tool.kind])),
+                h('div', null, h('span', null, '适用平台'), h('strong', null, tool.platform.join(' / ')))
+              ),
+              h(
+                'div',
+                { className: 'status-row' },
+                h(StatusPill, {
+                  enabled: tool.supportAutoUpdate,
+                  trueText: '支持自动/直接同步',
+                  falseText: '不支持自动更新'
+                }),
+                h(StatusPill, {
+                  enabled: !tool.needReinstallWhenUpdate,
+                  trueText: '无需重新安装',
+                  falseText: '更新后需重新安装'
+                })
+              ),
+              h('p', { className: 'version-note' }, tool.versionNote),
+              tool.matchUrls && tool.matchUrls.length > 0
+                ? h(
+                    'div',
+                    { className: 'match-box' },
+                    h('span', null, '适用页面 / 场景'),
+                    ...tool.matchUrls.map((url) => h('code', { key: url }, url))
+                  )
+                : null
+            )
+          : null,
+
+        activeTab === 'usage'
+          ? h(
+              'div',
+              { className: 'detail-tab-panel' },
+              renderDocSections(tool.doc)
+            )
+          : null,
+
+        activeTab === 'changelog'
+          ? h(
+              'div',
+              { className: 'detail-tab-panel' },
+              h(ChangelogList, { tool })
+            )
+          : null
       )
     )
   )
@@ -355,6 +582,8 @@ function App(): React.ReactElement {
   const [activeKind, setActiveKind] = useState<FilterKind>('all')
   const [keyword, setKeyword] = useState('')
   const [selectedId, setSelectedId] = useState(tools[0]?.id ?? '')
+
+  const latestTools = useMemo(() => getLatestTools(tools, 3), [])
 
   const filteredTools = useMemo(() => {
     const q = normalizeText(keyword)
@@ -402,7 +631,7 @@ function App(): React.ReactElement {
         h(
           'p',
           { className: 'hero-desc' },
-          '统一发布篡改猴脚本、浏览器插件 zip、网页工具和 Python 脚本。用户只需要收藏这个页面，就可以看到最新版本、说明文档和更新日志。'
+          '统一发布篡改猴脚本、浏览器插件 zip、网页工具和 Python 脚本。用户只需要收藏这个页面，就可以查看最新版本、安装说明和更新日志。'
         )
       ),
       h(
@@ -413,6 +642,8 @@ function App(): React.ReactElement {
         h('p', null, '修改 src/tools.ts 后重新部署即可更新页面。')
       )
     ),
+
+    h(HomeAnnouncement, { latestTools, onSelect: handleSelect }),
 
     h(
       'section',
