@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Allow: /userscripts/
+Allow: /downloads/
+
+Disallow: /assets/
+
+Sitemap: https://tool-hub-2vw.pages.dev/sitemap.xml

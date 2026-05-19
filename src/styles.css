@@ -48,6 +48,9 @@ button {
 }
 
 .eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   width: fit-content;
   margin: 0 0 12px;
   border: 1px solid rgba(66, 99, 235, 0.18);
@@ -77,6 +80,9 @@ button {
 }
 
 .hero-card {
+  display: flex;
+  align-items: center;
+  gap: 18px;
   min-height: 168px;
   padding: 24px;
   border: 1px solid rgba(220, 228, 242, 0.9);
@@ -86,6 +92,24 @@ button {
   box-shadow: 0 18px 48px rgba(33, 53, 89, 0.08);
 }
 
+.hero-card-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+  background: #eef3ff;
+  color: #4263eb;
+  flex-shrink: 0;
+}
+
+.hero-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .hero-card span {
   color: #6b7588;
   font-size: 14px;
@@ -93,8 +117,7 @@ button {
 
 .hero-card strong {
   display: block;
-  margin: 10px 0;
-  font-size: 54px;
+  font-size: 42px;
   line-height: 1;
   letter-spacing: -0.05em;
 }
@@ -103,6 +126,7 @@ button {
   margin: 0;
   color: #637087;
   line-height: 1.6;
+  font-size: 13px;
 }
 
 .update-board {
@@ -150,6 +174,9 @@ button {
 }
 
 .update-meta-row span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   border-radius: 999px;
   background: #f1f5fb;
   color: #526078;
@@ -193,6 +220,12 @@ button {
   box-shadow: 0 10px 24px rgba(33, 53, 89, 0.08);
 }
 
+.update-mini-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .update-mini-card strong {
   font-size: 15px;
 }
@@ -229,6 +262,9 @@ button {
 }
 
 .tab-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   border: 1px solid #dbe3f0;
   background: #ffffff;
   color: #43506a;
@@ -260,10 +296,9 @@ button {
   background: #ffffff;
 }
 
-.search-box span {
+.search-box .search-icon {
   color: #66728a;
-  font-weight: 800;
-  font-size: 13px;
+  flex-shrink: 0;
 }
 
 .search-box input {
@@ -287,6 +322,7 @@ button {
 }
 
 .tool-card {
+  position: relative;
   border-radius: 26px;
   padding: 20px;
   cursor: pointer;
@@ -294,6 +330,7 @@ button {
     transform 0.16s ease,
     border-color 0.16s ease,
     box-shadow 0.16s ease;
+  overflow: hidden;
 }
 
 .tool-card:hover {
@@ -307,6 +344,37 @@ button {
   box-shadow: 0 18px 44px rgba(66, 99, 235, 0.15);
 }
 
+.tool-card-accent {
+  position: absolute;
+  left: 0;
+  top: 16px;
+  bottom: 16px;
+  width: 4px;
+  border-radius: 999px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.tool-card-active .tool-card-accent {
+  opacity: 1;
+}
+
+.kind-userscript .tool-card-accent {
+  background: #4263eb;
+}
+
+.kind-browser-extension .tool-card-accent {
+  background: #6d28d9;
+}
+
+.kind-web-tool .tool-card-accent {
+  background: #047857;
+}
+
+.kind-python-script .tool-card-accent {
+  background: #b45309;
+}
+
 .tool-card-header {
   display: flex;
   justify-content: space-between;
@@ -314,6 +382,9 @@ button {
 }
 
 .tool-kind {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   width: fit-content;
   margin-bottom: 8px;
   border-radius: 999px;
@@ -357,6 +428,9 @@ button {
 }
 
 .version-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   height: fit-content;
   border-radius: 999px;
   background: #172033;
@@ -381,6 +455,9 @@ button {
 }
 
 .tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   border-radius: 999px;
   background: #f1f4f9;
   color: #506078;
@@ -402,7 +479,9 @@ button {
 }
 
 .meta-label {
-  display: block;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   color: #6e7a91;
   font-size: 12px;
   margin-bottom: 5px;
@@ -423,7 +502,7 @@ button {
 .ghost-button {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
+  gap: 6px;
   min-height: 40px;
   border-radius: 14px;
   padding: 0 15px;
@@ -528,6 +607,10 @@ button {
 }
 
 .detail-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
   border-radius: 13px;
   background: transparent;
   color: #5c677c;
@@ -567,7 +650,9 @@ button {
 }
 
 .version-table span {
-  display: block;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   color: #6b7588;
   font-size: 12px;
   margin-bottom: 5px;
@@ -588,6 +673,8 @@ button {
 
 .pill {
   display: inline-flex;
+  align-items: center;
+  gap: 5px;
   width: fit-content;
   border-radius: 999px;
   padding: 6px 10px;
@@ -622,6 +709,9 @@ button {
 }
 
 .match-box span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   color: #6b7588;
   font-size: 13px;
   font-weight: 900;
@@ -743,11 +833,27 @@ button {
 .changelog-top {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   gap: 12px;
   margin-bottom: 8px;
 }
 
+.changelog-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border-radius: 999px;
+  background: #172033;
+  color: #ffffff;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 900;
+}
+
 .changelog-top span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   color: #6b7588;
   font-size: 13px;
 }
@@ -760,16 +866,29 @@ button {
 }
 
 .empty-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
   border-style: dashed;
   border-radius: 24px;
-  padding: 26px;
+  padding: 40px 26px;
   color: #5b667a;
+  text-align: center;
 }
 
 .empty-box strong {
   display: block;
   color: #172033;
-  margin-bottom: 6px;
+  margin-bottom: 2px;
+}
+
+.search-highlight {
+  background: #fef08a;
+  color: #92400e;
+  border-radius: 4px;
+  padding: 0 2px;
 }
 
 @media (max-width: 1100px) {
