@@ -1,14 +1,16 @@
 import type { ToolItem } from './types'
 
+export const SITE_URL = 'https://tool-hub-2vw.pages.dev'
+
 /**
- * 这里是整个工具发布页的唯一数据源。
+ * 工具清单。
  *
- * 你后续新增/修改工具时，主要改这个文件：
- * 1. 改 version
- * 2. 改 updateTime
- * 3. 改 installUrl / downloadUrl / openUrl
- * 4. 改 versionNote
- * 5. 在 changelog 最前面追加一条更新记录
+ * 后续维护主要改这里：
+ * 1. 新增工具：复制一个对象，修改字段
+ * 2. 更新工具：改 version、updateTime、versionNote、changelog
+ * 3. 篡改猴脚本：installUrl 使用 /userscripts/xxx.user.js
+ * 4. 浏览器插件 / Python 脚本：downloadUrl 建议使用 GitHub Releases latest download 地址
+ * 5. 网页工具：openUrl 填线上页面地址
  */
 export const tools: ToolItem[] = [
   {
@@ -59,7 +61,7 @@ export const tools: ToolItem[] = [
     tags: ['浏览器插件', '表格采集', 'xlsx', '招生网站'],
     platform: ['Chrome', 'Edge'],
     matchUrls: ['招生网站历史分数页', '招生计划页', '录取查询页'],
-    downloadUrl: 'https://github.com/yuki1022qi/tool-hub/releases/latest/download/table-collector-extension.zip',
+    downloadUrl: 'https://github.com/Yuki-q22/tool-hub/releases/latest/download/table-collector-extension.zip',
     sourceUrl: '',
     supportAutoUpdate: false,
     needReinstallWhenUpdate: true,
@@ -77,15 +79,7 @@ export const tools: ToolItem[] = [
 
 ### 更新说明
 
-zip 安装方式不会自动更新。你发布新版本后，用户需要：
-
-1. 下载最新版 zip。
-2. 解压覆盖旧文件夹，或解压到新文件夹。
-3. 在扩展管理页点击「重新加载」。
-
-### 注意事项
-
-不要直接删除旧插件后再安装，除非不需要保留插件本地缓存和采集进度。
+zip 安装方式不会自动更新。发布新版本后，用户需要下载最新版 zip，然后在扩展管理页重新加载。
 `,
     changelog: [
       {
@@ -110,7 +104,7 @@ zip 安装方式不会自动更新。你发布新版本后，用户需要：
     supportAutoUpdate: true,
     needReinstallWhenUpdate: false,
     versionNote:
-      '网页工具直接打开线上地址即可使用。你更新并重新部署后，用户刷新页面就可以看到最新版本。如用户看到旧页面，通常是浏览器缓存或部署缓存。',
+      '网页工具直接打开线上地址即可使用。你更新并重新部署后，用户刷新页面就可以看到最新版本。',
     doc: `
 ### 使用说明
 
@@ -121,15 +115,7 @@ zip 安装方式不会自动更新。你发布新版本后，用户需要：
 
 ### 更新说明
 
-网页工具无需安装。你更新代码并部署后，用户重新打开或刷新页面即可使用新版。
-
-### 常见问题
-
-如果用户仍看到旧版本：
-
-- 让用户强制刷新页面。
-- 检查 Cloudflare Pages / GitHub Pages 是否完成部署。
-- 检查页面底部或工具卡片中的版本号是否已变化。
+网页工具无需安装。更新代码并部署后，用户重新打开或刷新页面即可使用新版。
 `,
     changelog: [
       {
@@ -148,7 +134,7 @@ zip 安装方式不会自动更新。你发布新版本后，用户需要：
     summary: '用于将试卷 PDF 或转换后的文档按题号切分成图片，辅助整理题目截图。',
     tags: ['Python', 'PDF', '题目截图', '批处理'],
     platform: ['Windows', 'Python 3.10+'],
-    downloadUrl: 'https://github.com/yuki1022qi/tool-hub/releases/latest/download/question-cutter.zip',
+    downloadUrl: 'https://github.com/Yuki-q22/tool-hub/releases/latest/download/question-cutter.zip',
     sourceUrl: '',
     supportAutoUpdate: false,
     needReinstallWhenUpdate: true,
@@ -159,22 +145,12 @@ zip 安装方式不会自动更新。你发布新版本后，用户需要：
 
 1. 点击「下载最新版」。
 2. 解压 zip。
-3. 按说明安装依赖。
+3. 按 README.md 安装依赖。
 4. 运行脚本处理文件。
-
-### 推荐目录结构
-
-\`\`\`text
-question-cutter/
-├─ main.py
-├─ requirements.txt
-├─ README.md
-└─ examples/
-\`\`\`
 
 ### 更新说明
 
-Python 脚本不会自动更新。你更新后，用户需要重新下载最新版压缩包。
+Python 脚本不会自动更新。发布新版本后，用户需要重新下载最新版压缩包。
 `,
     changelog: [
       {

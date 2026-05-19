@@ -456,7 +456,7 @@ input {
   border-radius: 12px;
   background: #f1f4f9;
   color: #31415b;
-  font-family: "JetBrains Mono", Consolas, monospace;
+  font-family: Consolas, "Microsoft YaHei", monospace;
   font-size: 12px;
   white-space: pre-wrap;
   word-break: break-all;

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import { kindLabels, tools } from './tools'
 import type { ToolItem, ToolKind } from './types'
 
@@ -12,7 +12,11 @@ const filters: Array<{ key: FilterKind; label: string }> = [
   { key: 'python-script', label: 'Python 脚本' }
 ]
 
-function getPrimaryAction(tool: ToolItem) {
+function h(type: string | React.ComponentType<any>, props?: Record<string, any> | null, ...children: React.ReactNode[]): React.ReactElement {
+  return React.createElement(type as any, props, ...children)
+}
+
+function getPrimaryAction(tool: ToolItem): { label: string; url: string; isExternal: boolean } {
   if (tool.kind === 'userscript') {
     return {
       label: '安装脚本',
@@ -44,61 +48,73 @@ function getPrimaryAction(tool: ToolItem) {
   }
 }
 
-function normalizeText(value: string) {
+function normalizeText(value: string): string {
   return value.trim().toLowerCase()
 }
 
-function renderDoc(doc: string) {
+function renderDoc(doc: string): React.ReactElement[] {
   const lines = doc.trim().split('\n')
-  return lines.map((line, index) => {
+  const result: React.ReactElement[] = []
+
+  lines.forEach((line, index) => {
     const trimmed = line.trim()
 
     if (!trimmed) {
-      return <div key={index} className="doc-space" />
+      result.push(h('div', { key: index, className: 'doc-space' }))
+      return
     }
 
     if (trimmed.startsWith('### ')) {
-      return (
-        <h4 key={index} className="doc-title">
-          {trimmed.replace(/^###\s+/, '')}
-        </h4>
+      result.push(
+        h(
+          'h4',
+          { key: index, className: 'doc-title' },
+          trimmed.replace(/^###\s+/, '')
+        )
       )
+      return
     }
 
     if (trimmed.startsWith('- ')) {
-      return (
-        <div key={index} className="doc-bullet">
-          <span>•</span>
-          <p>{trimmed.replace(/^-\s+/, '')}</p>
-        </div>
+      result.push(
+        h(
+          'div',
+          { key: index, className: 'doc-bullet' },
+          h('span', null, '•'),
+          h('p', null, trimmed.replace(/^-\s+/, ''))
+        )
       )
+      return
     }
 
     if (/^\d+\.\s+/.test(trimmed)) {
-      return (
-        <div key={index} className="doc-step">
-          <span>{trimmed.match(/^\d+/)?.[0]}</span>
-          <p>{trimmed.replace(/^\d+\.\s+/, '')}</p>
-        </div>
+      result.push(
+        h(
+          'div',
+          { key: index, className: 'doc-step' },
+          h('span', null, trimmed.match(/^\d+/)?.[0] || ''),
+          h('p', null, trimmed.replace(/^\d+\.\s+/, ''))
+        )
       )
+      return
     }
 
-    if (trimmed.startsWith('```')) {
-      return null
-    }
-
-    return (
-      <p key={index} className="doc-paragraph">
-        {trimmed.replace(/`/g, '')}
-      </p>
+    result.push(
+      h(
+        'p',
+        { key: index, className: 'doc-paragraph' },
+        trimmed.replace(/`/g, '')
+      )
     )
   })
+
+  return result
 }
 
-function CopyButton({ text }: { text: string }) {
+function CopyButton({ text }: { text: string }): React.ReactElement {
   const [copied, setCopied] = useState(false)
 
-  async function handleCopy() {
+  async function handleCopy(): Promise<void> {
     if (!text) return
 
     try {
@@ -106,20 +122,38 @@ function CopyButton({ text }: { text: string }) {
       setCopied(true)
       window.setTimeout(() => setCopied(false), 1200)
     } catch {
-      setCopied(false)
       window.alert('复制失败，请手动复制链接。')
     }
   }
 
-  return (
-    <button className="ghost-button" type="button" onClick={handleCopy} disabled={!text}>
-      {copied ? '已复制' : '复制链接'}
-    </button>
+  return h(
+    'button',
+    {
+      className: 'ghost-button',
+      type: 'button',
+      onClick: handleCopy,
+      disabled: !text
+    },
+    copied ? '已复制' : '复制链接'
   )
 }
 
-function StatusPill({ enabled, trueText, falseText }: { enabled: boolean; trueText: string; falseText: string }) {
-  return <span className={enabled ? 'pill pill-success' : 'pill pill-warning'}>{enabled ? trueText : falseText}</span>
+function StatusPill({
+  enabled,
+  trueText,
+  falseText
+}: {
+  enabled: boolean
+  trueText: string
+  falseText: string
+}): React.ReactElement {
+  return h(
+    'span',
+    {
+      className: enabled ? 'pill pill-success' : 'pill pill-warning'
+    },
+    enabled ? trueText : falseText
+  )
 }
 
 function ToolCard({
@@ -130,161 +164,194 @@ function ToolCard({
   tool: ToolItem
   active: boolean
   onSelect: (tool: ToolItem) => void
-}) {
+}): React.ReactElement {
   const primaryAction = getPrimaryAction(tool)
 
-  return (
-    <article className={active ? 'tool-card tool-card-active' : 'tool-card'} onClick={() => onSelect(tool)}>
-      <div className="tool-card-header">
-        <div>
-          <div className="tool-kind">{kindLabels[tool.kind]}</div>
-          <h3>{tool.name}</h3>
-        </div>
-        <div className="version-badge">v{tool.version}</div>
-      </div>
+  return h(
+    'article',
+    {
+      className: active ? 'tool-card tool-card-active' : 'tool-card',
+      onClick: () => onSelect(tool)
+    },
+    h(
+      'div',
+      { className: 'tool-card-header' },
+      h(
+        'div',
+        null,
+        h('div', { className: 'tool-kind' }, kindLabels[tool.kind]),
+        h('h3', null, tool.name)
+      ),
+      h('div', { className: 'version-badge' }, `v${tool.version}`)
+    ),
 
-      <p className="tool-summary">{tool.summary}</p>
+    h('p', { className: 'tool-summary' }, tool.summary),
 
-      <div className="tag-row">
-        {tool.tags.map((tag) => (
-          <span key={tag} className="tag">
-            {tag}
-          </span>
-        ))}
-      </div>
+    h(
+      'div',
+      { className: 'tag-row' },
+      ...tool.tags.map((tag) =>
+        h('span', { key: tag, className: 'tag' }, tag)
+      )
+    ),
 
-      <div className="meta-grid">
-        <div>
-          <span className="meta-label">更新时间</span>
-          <strong>{tool.updateTime}</strong>
-        </div>
-        <div>
-          <span className="meta-label">更新方式</span>
-          <strong>{tool.supportAutoUpdate ? '可自动/直接同步' : '需手动下载'}</strong>
-        </div>
-      </div>
+    h(
+      'div',
+      { className: 'meta-grid' },
+      h(
+        'div',
+        null,
+        h('span', { className: 'meta-label' }, '更新时间'),
+        h('strong', null, tool.updateTime)
+      ),
+      h(
+        'div',
+        null,
+        h('span', { className: 'meta-label' }, '更新方式'),
+        h('strong', null, tool.supportAutoUpdate ? '可自动/直接同步' : '需手动下载')
+      )
+    ),
 
-      <div className="card-actions" onClick={(event) => event.stopPropagation()}>
-        {primaryAction.url ? (
-          <a
-            className="primary-button"
-            href={primaryAction.url}
-            target={primaryAction.isExternal ? '_blank' : '_self'}
-            rel="noreferrer"
-          >
-            {primaryAction.label}
-          </a>
-        ) : (
-          <button className="primary-button disabled" type="button" disabled>
-            未配置链接
-          </button>
-        )}
-
-        <CopyButton text={primaryAction.url} />
-      </div>
-    </article>
+    h(
+      'div',
+      {
+        className: 'card-actions',
+        onClick: (event: React.MouseEvent<HTMLDivElement>) => event.stopPropagation()
+      },
+      primaryAction.url
+        ? h(
+            'a',
+            {
+              className: 'primary-button',
+              href: primaryAction.url,
+              target: primaryAction.isExternal ? '_blank' : '_self',
+              rel: 'noreferrer'
+            },
+            primaryAction.label
+          )
+        : h(
+            'button',
+            {
+              className: 'primary-button disabled',
+              type: 'button',
+              disabled: true
+            },
+            '未配置链接'
+          ),
+      h(CopyButton, { text: primaryAction.url })
+    )
   )
 }
 
-function DetailPanel({ tool }: { tool: ToolItem }) {
+function DetailPanel({ tool }: { tool: ToolItem }): React.ReactElement {
   const primaryAction = getPrimaryAction(tool)
 
-  return (
-    <aside className="detail-panel">
-      <div className="detail-sticky">
-        <section className="detail-block">
-          <div className="section-heading">
-            <span>版本说明</span>
-          </div>
+  return h(
+    'aside',
+    { className: 'detail-panel' },
+    h(
+      'div',
+      { className: 'detail-sticky' },
 
-          <h2>{tool.name}</h2>
-          <p className="detail-summary">{tool.summary}</p>
+      h(
+        'section',
+        { className: 'detail-block' },
+        h('div', { className: 'section-heading' }, h('span', null, '版本说明')),
+        h('h2', null, tool.name),
+        h('p', { className: 'detail-summary' }, tool.summary),
 
-          <div className="version-table">
-            <div>
-              <span>当前版本</span>
-              <strong>v{tool.version}</strong>
-            </div>
-            <div>
-              <span>更新时间</span>
-              <strong>{tool.updateTime}</strong>
-            </div>
-            <div>
-              <span>工具类型</span>
-              <strong>{kindLabels[tool.kind]}</strong>
-            </div>
-            <div>
-              <span>适用平台</span>
-              <strong>{tool.platform.join(' / ')}</strong>
-            </div>
-          </div>
+        h(
+          'div',
+          { className: 'version-table' },
+          h('div', null, h('span', null, '当前版本'), h('strong', null, `v${tool.version}`)),
+          h('div', null, h('span', null, '更新时间'), h('strong', null, tool.updateTime)),
+          h('div', null, h('span', null, '工具类型'), h('strong', null, kindLabels[tool.kind])),
+          h('div', null, h('span', null, '适用平台'), h('strong', null, tool.platform.join(' / ')))
+        ),
 
-          <div className="status-row">
-            <StatusPill enabled={tool.supportAutoUpdate} trueText="支持自动/直接同步" falseText="不支持自动更新" />
-            <StatusPill enabled={!tool.needReinstallWhenUpdate} trueText="无需重新安装" falseText="更新后需重新安装" />
-          </div>
+        h(
+          'div',
+          { className: 'status-row' },
+          h(StatusPill, {
+            enabled: tool.supportAutoUpdate,
+            trueText: '支持自动/直接同步',
+            falseText: '不支持自动更新'
+          }),
+          h(StatusPill, {
+            enabled: !tool.needReinstallWhenUpdate,
+            trueText: '无需重新安装',
+            falseText: '更新后需重新安装'
+          })
+        ),
 
-          <p className="version-note">{tool.versionNote}</p>
+        h('p', { className: 'version-note' }, tool.versionNote),
 
-          {tool.matchUrls && tool.matchUrls.length > 0 ? (
-            <div className="match-box">
-              <span>适用页面 / 场景</span>
-              {tool.matchUrls.map((url) => (
-                <code key={url}>{url}</code>
-              ))}
-            </div>
-          ) : null}
+        tool.matchUrls && tool.matchUrls.length > 0
+          ? h(
+              'div',
+              { className: 'match-box' },
+              h('span', null, '适用页面 / 场景'),
+              ...tool.matchUrls.map((url) => h('code', { key: url }, url))
+            )
+          : null,
 
-          <div className="detail-actions">
-            {primaryAction.url ? (
-              <a
-                className="primary-button"
-                href={primaryAction.url}
-                target={primaryAction.isExternal ? '_blank' : '_self'}
-                rel="noreferrer"
-              >
-                {primaryAction.label}
-              </a>
-            ) : null}
+        h(
+          'div',
+          { className: 'detail-actions' },
+          primaryAction.url
+            ? h(
+                'a',
+                {
+                  className: 'primary-button',
+                  href: primaryAction.url,
+                  target: primaryAction.isExternal ? '_blank' : '_self',
+                  rel: 'noreferrer'
+                },
+                primaryAction.label
+              )
+            : null,
+          h(CopyButton, { text: primaryAction.url })
+        )
+      ),
 
-            <CopyButton text={primaryAction.url} />
-          </div>
-        </section>
+      h(
+        'section',
+        { className: 'detail-block' },
+        h('div', { className: 'section-heading' }, h('span', null, '说明文档')),
+        h('div', { className: 'doc-content' }, ...renderDoc(tool.doc))
+      ),
 
-        <section className="detail-block">
-          <div className="section-heading">
-            <span>说明文档</span>
-          </div>
-          <div className="doc-content">{renderDoc(tool.doc)}</div>
-        </section>
-
-        <section className="detail-block">
-          <div className="section-heading">
-            <span>更新日志</span>
-          </div>
-
-          <div className="changelog-list">
-            {tool.changelog.map((log) => (
-              <div key={`${tool.id}-${log.version}`} className="changelog-item">
-                <div className="changelog-top">
-                  <strong>v{log.version}</strong>
-                  <span>{log.date}</span>
-                </div>
-                <ul>
-                  {log.items.map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-        </section>
-      </div>
-    </aside>
+      h(
+        'section',
+        { className: 'detail-block' },
+        h('div', { className: 'section-heading' }, h('span', null, '更新日志')),
+        h(
+          'div',
+          { className: 'changelog-list' },
+          ...tool.changelog.map((log) =>
+            h(
+              'div',
+              { key: `${tool.id}-${log.version}`, className: 'changelog-item' },
+              h(
+                'div',
+                { className: 'changelog-top' },
+                h('strong', null, `v${log.version}`),
+                h('span', null, log.date)
+              ),
+              h(
+                'ul',
+                null,
+                ...log.items.map((item) => h('li', { key: item }, item))
+              )
+            )
+          )
+        )
+      )
+    )
   )
 }
 
-function App() {
+function App(): React.ReactElement {
   const [activeKind, setActiveKind] = useState<FilterKind>('all')
   const [keyword, setKeyword] = useState('')
   const [selectedId, setSelectedId] = useState(tools[0]?.id ?? '')
@@ -316,69 +383,93 @@ function App() {
     return tools.find((tool) => tool.id === selectedId) ?? filteredTools[0] ?? tools[0]
   }, [filteredTools, selectedId])
 
-  function handleSelect(tool: ToolItem) {
+  function handleSelect(tool: ToolItem): void {
     setSelectedId(tool.id)
   }
 
-  return (
-    <main className="page-shell">
-      <header className="hero">
-        <div>
-          <p className="eyebrow">Yuki Tool Hub</p>
-          <h1>工具发布中心</h1>
-          <p className="hero-desc">
-            统一发布篡改猴脚本、浏览器插件 zip、网页工具和 Python 脚本。用户只需要收藏这个页面，就可以看到最新版本、说明文档和更新日志。
-          </p>
-        </div>
+  return h(
+    'main',
+    { className: 'page-shell' },
 
-        <div className="hero-card">
-          <span>工具总数</span>
-          <strong>{tools.length}</strong>
-          <p>修改 src/tools.ts 后重新部署即可更新页面。</p>
-        </div>
-      </header>
+    h(
+      'header',
+      { className: 'hero' },
+      h(
+        'div',
+        null,
+        h('p', { className: 'eyebrow' }, 'tool-hub'),
+        h('h1', null, '工具发布中心'),
+        h(
+          'p',
+          { className: 'hero-desc' },
+          '统一发布篡改猴脚本、浏览器插件 zip、网页工具和 Python 脚本。用户只需要收藏这个页面，就可以看到最新版本、说明文档和更新日志。'
+        )
+      ),
+      h(
+        'div',
+        { className: 'hero-card' },
+        h('span', null, '工具总数'),
+        h('strong', null, String(tools.length)),
+        h('p', null, '修改 src/tools.ts 后重新部署即可更新页面。')
+      )
+    ),
 
-      <section className="toolbar">
-        <div className="filter-tabs">
-          {filters.map((filter) => (
-            <button
-              key={filter.key}
-              className={activeKind === filter.key ? 'tab-button active' : 'tab-button'}
-              type="button"
-              onClick={() => setActiveKind(filter.key)}
-            >
-              {filter.label}
-            </button>
-          ))}
-        </div>
+    h(
+      'section',
+      { className: 'toolbar' },
+      h(
+        'div',
+        { className: 'filter-tabs' },
+        ...filters.map((filter) =>
+          h(
+            'button',
+            {
+              key: filter.key,
+              className: activeKind === filter.key ? 'tab-button active' : 'tab-button',
+              type: 'button',
+              onClick: () => setActiveKind(filter.key)
+            },
+            filter.label
+          )
+        )
+      ),
+      h(
+        'label',
+        { className: 'search-box' },
+        h('span', null, '搜索'),
+        h('input', {
+          value: keyword,
+          onChange: (event: React.ChangeEvent<HTMLInputElement>) => setKeyword(event.target.value),
+          placeholder: '输入工具名称、标签、版本或适用页面'
+        })
+      )
+    ),
 
-        <label className="search-box">
-          <span>搜索</span>
-          <input
-            value={keyword}
-            onChange={(event) => setKeyword(event.target.value)}
-            placeholder="输入工具名称、标签、版本或适用页面"
-          />
-        </label>
-      </section>
+    h(
+      'section',
+      { className: 'content-grid' },
+      h(
+        'div',
+        { className: 'tool-list' },
+        filteredTools.length > 0
+          ? filteredTools.map((tool) =>
+              h(ToolCard, {
+                key: tool.id,
+                tool,
+                active: selectedTool?.id === tool.id,
+                onSelect: handleSelect
+              })
+            )
+          : h(
+              'div',
+              { className: 'empty-box' },
+              h('strong', null, '没有找到匹配工具'),
+              h('p', null, '可以换一个关键词，或切换到「全部」分类。')
+            )
+      ),
 
-      <section className="content-grid">
-        <div className="tool-list">
-          {filteredTools.length > 0 ? (
-            filteredTools.map((tool) => (
-              <ToolCard key={tool.id} tool={tool} active={selectedTool?.id === tool.id} onSelect={handleSelect} />
-            ))
-          ) : (
-            <div className="empty-box">
-              <strong>没有找到匹配工具</strong>
-              <p>可以换一个关键词，或切换到「全部」分类。</p>
-            </div>
-          )}
-        </div>
-
-        {selectedTool ? <DetailPanel tool={selectedTool} /> : null}
-      </section>
-    </main>
+      selectedTool ? h(DetailPanel, { tool: selectedTool }) : null
+    )
   )
 }
 
