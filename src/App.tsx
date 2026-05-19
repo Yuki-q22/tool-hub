@@ -69,22 +69,62 @@ function normalizeText(value: string): string {
   return value.trim().toLowerCase()
 }
 
+function getLatestLog(tool: ToolItem): ToolItem['changelog'][number] | undefined {
+  return tool.changelog[0]
+}
+
+function getAnnouncementDate(tool: ToolItem): string {
+  return getLatestLog(tool)?.date || tool.updateTime
+}
+
+function parseDateValue(value: string): number {
+  const parsed = Date.parse(value)
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
+function getAnnouncementTime(tool: ToolItem): number {
+  return Math.max(parseDateValue(getAnnouncementDate(tool)), parseDateValue(tool.updateTime))
+}
+
+function compareVersion(a: string, b: string): number {
+  const left = a.match(/\d+/g)?.map(Number) ?? []
+  const right = b.match(/\d+/g)?.map(Number) ?? []
+  const maxLength = Math.max(left.length, right.length)
+
+  for (let index = 0; index < maxLength; index += 1) {
+    const leftValue = left[index] ?? 0
+    const rightValue = right[index] ?? 0
+    if (leftValue !== rightValue) return leftValue - rightValue
+  }
+
+  return 0
+}
+
 function getLatestTools(items: ToolItem[], limit = 3): ToolItem[] {
-  return [...items]
+  return items
+    .map((tool, index) => ({ tool, index }))
     .sort((a, b) => {
-      const dateDiff = Date.parse(b.updateTime) - Date.parse(a.updateTime)
-      if (dateDiff !== 0) return dateDiff
-      return a.name.localeCompare(b.name, 'zh-Hans-CN')
+      const importantDiff = Number(Boolean(b.tool.important)) - Number(Boolean(a.tool.important))
+      if (importantDiff !== 0) return importantDiff
+
+      const timeDiff = getAnnouncementTime(b.tool) - getAnnouncementTime(a.tool)
+      if (timeDiff !== 0) return timeDiff
+
+      const versionDiff = compareVersion(b.tool.version, a.tool.version)
+      if (versionDiff !== 0) return versionDiff
+
+      return a.index - b.index
     })
     .slice(0, limit)
+    .map((item) => item.tool)
 }
 
 function buildAnnouncementText(latestTools: ToolItem[]): string {
   if (latestTools.length === 0) return ''
 
-  const latestDate = latestTools[0].updateTime
+  const latestDate = getAnnouncementDate(latestTools[0])
   const updateLines = latestTools.map((tool, index) => {
-    const latestLog = tool.changelog[0]
+    const latestLog = getLatestLog(tool)
     const items = latestLog?.items?.slice(0, 3).join('；') || tool.summary
     return `${index + 1}. ${tool.name} v${tool.version}：${items}`
   })
@@ -285,7 +325,7 @@ function HomeAnnouncement({
       h(
         'div',
         { className: 'update-meta-row' },
-        h('span', null, `更新时间：${featuredTool.updateTime}`),
+        h('span', null, `更新时间：${getAnnouncementDate(featuredTool)}`),
         h('span', null, kindLabels[featuredTool.kind]),
         h('span', null, featuredTool.supportAutoUpdate ? '支持自动/直接同步' : '需手动下载更新')
       ),
@@ -339,7 +379,7 @@ function HomeAnnouncement({
             kindLabels[tool.kind]
           ),
           h('strong', null, tool.name),
-          h('small', null, `v${tool.version} · ${tool.updateTime}`),
+          h('small', null, `v${tool.version} · ${getAnnouncementDate(tool)}`),
           latestLog?.items?.[0] ? h('p', null, latestLog.items[0]) : null
         )
       })
@@ -583,7 +623,7 @@ function App(): React.ReactElement {
   const [keyword, setKeyword] = useState('')
   const [selectedId, setSelectedId] = useState(tools[0]?.id ?? '')
 
-  const latestTools = useMemo(() => getLatestTools(tools, 3), [])
+  const latestTools = getLatestTools(tools, 3)
 
   const filteredTools = useMemo(() => {
     const q = normalizeText(keyword)
